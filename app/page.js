@@ -7,14 +7,14 @@ import "./i18n.js";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Readable } from "stream";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Legend, ResponsiveContainer } from 'recharts';
 
 import css from "./page.module.css";
 import csv from "csv-parser";
 
 const MaleFemaleSurvivalRatio = ({ data, t }) => {
   return (
-       <ResponsiveContainer width="30%" height="30%">
+       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           width={500}
           height={300}
@@ -28,11 +28,32 @@ const MaleFemaleSurvivalRatio = ({ data, t }) => {
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" />
-          <YAxis />
           <Tooltip formatter={ (value, name) => [value, t(name)]}/>
-          <Legend formatter={ (value) => t(value)}/>
-          <Bar dataKey="survived" stackId="a" fill="#8884d8" />
-          <Bar dataKey="died" stackId="a" fill="#82ca9d" />
+          <Bar dataKey="survived" stackId="a" fill="lightgreen" label={{ position: "center", fill: "black" }}/>
+          <Bar dataKey="died" stackId="a" fill="red" label={{ position: "center", fill: "black" }} />
+        </BarChart>
+      </ResponsiveContainer>
+  );
+};
+
+const MaleFemaleSurvivalRatioPercentage = ({ data, t }) => {
+  return (
+       <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          width={500}
+          height={300}
+          data={data}
+          margin={{
+            top: 20,
+            right: 30,
+            left: 20,
+            bottom: 5,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <Tooltip formatter={ (value, name) => [value, t(name)]}/>
+          <Bar dataKey="died" fill="red" label={{ position: "center", fill: "black" }} />
         </BarChart>
       </ResponsiveContainer>
   );
@@ -83,10 +104,7 @@ const data = [
   },
 ];
 
-
-
 const titanic_csv = `
-sex,age,sibsp,parch,fare,embarked,class,who,alone,survived
 male,22,1,0,7.25,S,Third,man,FALSE,0
 female,38,1,0,71.2833,C,First,woman,FALSE,1
 female,26,0,0,7.925,S,Third,woman,TRUE,1
@@ -981,10 +999,12 @@ male,32,0,0,7.75,Q,Third,man,TRUE,0
 `;
 
 let titanic = [];
+const header = ["sex","age","sibsp","parch","fare","embarked","class","who","alone","survived"];
 
 export default function Home() {
   const { t, i18n } = useTranslation();
   const [maleFemaleSurvivalRatioData, setMaleFemaleSurvivalRatioData] = useState([]);
+  const [maleFemaleSurvivalRatioDataPercent, setMaleFemaleSurvivalRatioDataPercent] = useState([]);
 
   const handleLanguageChange = (e) => {
     i18n.changeLanguage(e.target.value); 
@@ -1047,6 +1067,18 @@ export default function Home() {
           },
         ]);
 
+        setMaleFemaleSurvivalRatioDataPercent([
+          {
+            name: t("male"),
+            died: Math.floor((number_of_males(titanic) - number_of_males_that_survived(titanic)) * 100 / number_of_males(titanic)),
+          },
+
+          {
+            name: t("female"),
+            died: Math.floor((number_of_females(titanic) - number_of_females_that_survived(titanic)) * 100 / number_of_females(titanic))
+          },
+        ]);
+
       })
   }, [i18n.language]);
 
@@ -1056,18 +1088,65 @@ export default function Home() {
         <span className={`${css.delius} fs-3`}> Dash </span>
         
         <div className="d-flex gap-3 align-items-center">
-          <label htmlFor="lang-select" className="text-nowrap">{ t('changeLanguage') }: </label>
-          <select id="lang-select" className="form-select" onChange={handleLanguageChange}>
+          <label htmlFor="lang-select" className={`text-nowrap ${css.delius}`}>{ t('changeLanguage') }: </label>
+          <select id="lang-select" className={`form-select ${css.delius}`} onChange={handleLanguageChange}>
             <option value="en"> English </option>
             <option value="fr"> Français </option>
           </select>
         </div>
       </nav>
 
-      <h1 className="text-center mt-4"> { t("context") } </h1>
+      <h1 className={`text-center mt-4 ${css.delius}`}> { t("context") } </h1>
+      <hr />
 
+      <h6 className={`text-center mt-4 ${css.delius}`}> Titanic data overview </h6>
+{ titanic.length > 0 && (
+    <div className="table-responsive"
+         style={{ maxHeight: "30vh", overflowY: "auto" }}
+    >
+      <table className="table table-bordered table-hover h-25">
+        <thead className="table-light">
+          <tr>
+            {header.map((h) => ( <th key={h}>{h}</th> ))}
+          </tr>
+        </thead>
+    
+        <tbody>
+          {titanic.map((row, i) => (
+            <tr key={i}>
+              <td>{ row["_0"] } </td>
+              <td>{ row["_1"] } </td>
+              <td>{ row["_2"] } </td>
+              <td>{ row["_3"] } </td>
+              <td>{ row["_4"] } </td>
+              <td>{ row["_5"] } </td>
+              <td>{ row["_6"] } </td>
+              <td>{ row["_7"] } </td>
+              <td>{ row["_8"] } </td>
+              <td>{ row["_9"] } </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+)}
       
-      <MaleFemaleSurvivalRatio data={maleFemaleSurvivalRatioData} t={t} />
+      
+      <hr />
+      <h6 className={`text-center mt-4 ${css.delius}`}> Titanic analytics dashboard </h6>
+      <hr />
+
+      <div className="container w-100 h-100 d-flex gap-5 flex-row-3 flex-wrap justify-content-between">
+        <div className="w-25 h-25 d-flex flex-column align-items-center">
+          <h5> <span className="text-danger"> 453 men died </span> during the titanic disaster </h5>
+          <MaleFemaleSurvivalRatio data={maleFemaleSurvivalRatioData} t={t} />
+        </div>
+        
+        <div className="w-25 h-25 d-flex flex-column align-items-center">
+          <h5> <span className="text-danger"> 79% of men died </span> during the titanic disaster </h5>
+          <MaleFemaleSurvivalRatioPercentage data={maleFemaleSurvivalRatioDataPercent} t={t} />
+        </div>
+      </div>
 
     </>
   );
