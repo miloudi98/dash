@@ -7,7 +7,7 @@ import "./i18n.js";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Readable } from "stream";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart,Cell, Sector, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Legend, ResponsiveContainer } from 'recharts';
 
 import css from "./page.module.css";
 import csv from "csv-parser";
@@ -1005,11 +1005,32 @@ export default function Home() {
   const { t, i18n } = useTranslation();
   const [maleFemaleSurvivalRatioData, setMaleFemaleSurvivalRatioData] = useState([]);
   const [maleFemaleSurvivalRatioDataPercent, setMaleFemaleSurvivalRatioDataPercent] = useState([]);
+  const [chartToShow, setChartToShow] = useState("port");
 
   const handleLanguageChange = (e) => {
     i18n.changeLanguage(e.target.value); 
   };
 
+  const percent_of_died_embarked = (emb, data) => {
+    let cnt = 0;
+    let tot = 0;
+    data.forEach((obj) => {
+      cnt += obj["_5"] === emb && obj["_9"] === "0";
+      tot += obj["_5"] === emb;
+    });
+    return Math.floor(100 * cnt / tot);
+  };
+
+  const percent_of_died_class = (cls, data) => {
+    let cnt = 0;
+    let tot = 0;
+    data.forEach((obj) => {
+      cnt += obj["_6"] === cls && obj["_9"] === "0";
+      tot += obj["_6"] === cls;
+    });
+    return Math.floor(100 * cnt / tot);
+  };
+  
   const number_of_males = (data) => {
     let cnt = 0;
     data.forEach((obj) => {
@@ -1041,6 +1062,39 @@ export default function Home() {
     });
     return cnt;
   };
+
+  const renderActiveShape = (props) => {
+    const {
+      cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value, percent,
+    } = props;
+
+    return (
+      <g>
+        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill}>
+          {payload.name}
+        </text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 6}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+        <text
+          x={cx}
+          y={cy}
+          dy={24}
+          textAnchor="middle"
+          fill="#333"
+        >
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      </g>
+    );
+  };
+
 
   /// Parse the titanic data.
   useEffect(() => {
@@ -1082,6 +1136,10 @@ export default function Home() {
       })
   }, [i18n.language]);
 
+  const handleChartSelect = (e) => {
+    setChartToShow(e.target.value);
+  };
+
   return (
     <>
       <nav className="d-flex align-items-center justify-content-between p-3 border-bottom">
@@ -1099,7 +1157,7 @@ export default function Home() {
       <h1 className={`text-center mt-4 ${css.delius}`}> { t("context") } </h1>
       <hr />
 
-      <h6 className={`text-center mt-4 ${css.delius}`}> Titanic data overview </h6>
+      <h6 className={`text-center mt-4 ${css.delius}`}> { t("overview") } </h6>
 { titanic.length > 0 && (
     <div className="table-responsive"
          style={{ maxHeight: "30vh", overflowY: "auto" }}
@@ -1107,23 +1165,23 @@ export default function Home() {
       <table className="table table-bordered table-hover h-25">
         <thead className="table-light">
           <tr>
-            {header.map((h) => ( <th key={h}>{h}</th> ))}
+            {header.map((h) => ( <th key={h}>{t(h)}</th> ))}
           </tr>
         </thead>
     
         <tbody>
           {titanic.map((row, i) => (
             <tr key={i}>
-              <td>{ row["_0"] } </td>
-              <td>{ row["_1"] } </td>
-              <td>{ row["_2"] } </td>
-              <td>{ row["_3"] } </td>
-              <td>{ row["_4"] } </td>
-              <td>{ row["_5"] } </td>
-              <td>{ row["_6"] } </td>
-              <td>{ row["_7"] } </td>
-              <td>{ row["_8"] } </td>
-              <td>{ row["_9"] } </td>
+              <td>{ t(row["_0"]) } </td>
+              <td>{ t(row["_1"]) } </td>
+              <td>{ t(row["_2"]) } </td>
+              <td>{ t(row["_3"]) } </td>
+              <td>{ t(row["_4"]) } </td>
+              <td>{ t(row["_5"]) } </td>
+              <td>{ t(row["_6"]) } </td>
+              <td>{ t(row["_7"]) } </td>
+              <td>{ t(row["_8"]) } </td>
+              <td>{ t(row["_9"]) } </td>
             </tr>
           ))}
         </tbody>
@@ -1133,19 +1191,122 @@ export default function Home() {
       
       
       <hr />
-      <h6 className={`text-center mt-4 ${css.delius}`}> Titanic analytics dashboard </h6>
+      <h6 className={`text-center mt-4 ${css.delius}`}> { t("analytics") } </h6>
       <hr />
 
-      <div className="container w-100 h-100 d-flex gap-5 flex-row-3 flex-wrap justify-content-between">
-        <div className="w-25 h-25 d-flex flex-column align-items-center">
-          <h5> <span className="text-danger"> 453 men died </span> during the titanic disaster </h5>
+      <div className="container w-100 h-100 d-flex gap-5 flex-wrap justify-content-between">
+        <div className="w-25 h-25 d-flex flex-column align-items-center p-2">
+
+          <h5> { t("chart1") } </h5>
+
           <MaleFemaleSurvivalRatio data={maleFemaleSurvivalRatioData} t={t} />
         </div>
         
-        <div className="w-25 h-25 d-flex flex-column align-items-center">
-          <h5> <span className="text-danger"> 79% of men died </span> during the titanic disaster </h5>
+        <div className="w-25 h-25 d-flex flex-column align-items-center p-2">
+          <h5> { t("chart2" ) } </h5>
           <MaleFemaleSurvivalRatioPercentage data={maleFemaleSurvivalRatioDataPercent} t={t} />
         </div>
+
+<div className="d-flex flex-column align-items-center p-2 w-100 h-100">
+
+        <div className="d-flex gap-3 align-items-center mb-5">
+          <label htmlFor="lang-select" className={`text-nowrap ${css.delius}`}>{ t('chartSelect') }: </label>
+          <select id="lang-select" className={`form-select ${css.delius}`} onChange={handleChartSelect}>
+            <option value="port"> { t("ByPort") } </option>
+            <option value="class"> { t("ByClass") } </option>
+          </select>
+        </div>
+
+{ chartToShow === "port" && (
+        <div className="w-25 h-25 d-flex flex-column align-items-center">
+          <h5> { t("chart3" ) } </h5>
+          <ResponsiveContainer
+            height="100%"
+            width="100%"
+          >
+            <PieChart
+              height="100%"
+              width="100%"
+            >
+              <Pie
+                activeShape={renderActiveShape}
+                data={[
+                  {
+                    name: 'Port S',
+                    value: percent_of_died_embarked("S", titanic)
+                  },
+                  {
+                    name: 'Port C',
+                    value: percent_of_died_embarked("C", titanic)
+                  },
+                  {
+                    name: 'Port Q',
+                    value: percent_of_died_embarked("Q", titanic)
+                  },
+                ]}
+                fill="#8884d8"
+                innerRadius={60}
+                outerRadius={80}
+                activeIndex={2}
+              >
+              <Tooltip
+                content={function vG(){}}
+                defaultIndex={2}
+              />
+                <Cell key={1} fill="#8884d8" />
+                <Cell key={2} fill="#8884d8" />
+                <Cell key={3} fill="red" />
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+)}
+
+{ chartToShow === "class" && (
+        <div className="w-25 h-25 d-flex flex-column align-items-center">
+          <h5> { t("chart4" ) } </h5>
+          <ResponsiveContainer
+            height="100%"
+            width="100%"
+          >
+            <PieChart
+              height="100%"
+              width="100%"
+            >
+              <Pie
+                activeShape={renderActiveShape}
+                data={[
+                  {
+                    name: `${t("First")} ${t("class")}` ,
+                    value: percent_of_died_class("First", titanic)
+                  },
+                  {
+                    name: `${t("Second")} ${t("class")}` ,
+                    value: percent_of_died_class("Second", titanic)
+                  },
+                  {
+                    name: `${t("Third")} ${t("class")}` ,
+                    value: percent_of_died_class("Third", titanic)
+                  },
+                ]}
+                fill="#8884d8"
+                innerRadius={60}
+                outerRadius={80}
+                activeIndex={2}
+              >
+                <Cell key={1} fill="#8884d8" />
+                <Cell key={2} fill="#8884d8" />
+                <Cell key={3} fill="red" />
+              </Pie>
+              <Tooltip
+                content={function vG(){}}
+                defaultIndex={2}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+)}
+</div>
       </div>
 
     </>
